@@ -1,0 +1,44 @@
+name: Deploy Changed Files to Salesforce
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # すべての履歴をフェッチ
+
+    - name: Fetch master branch
+      run: git fetch origin master
+
+    - name: Install Salesforce CLI
+      run: |
+        curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        npm install -g @salesforce/cli
+
+    - name: Authenticate with Salesforce using Web Login
+      env:
+        SFDX_AUTH_URL: ${{ secrets.SALESFORCE_AUTH_URL }}
+      run: |
+        echo "Logging in to Salesforce"
+        echo $SFDX_AUTH_URL > sfdx-auth-url.txt
+        sf org login sfdx-url -f sfdx-auth-url.txt -a MyAlias -s
+        echo "Authenticated with Salesforce"
+
+    - name: Get changed and added files
+      run: |
+        git diff --name-only --diff-filter=ACM origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF} > changed_files.txt
+        cat changed_files.txt  # For debugging, to see the changed files
+
+    - name: Deploy changed files to Salesforce
+      run: |
+        while read file; do
+          sf project deploy start -p "$file" --target-org MyAlias
