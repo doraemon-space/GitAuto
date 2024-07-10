@@ -33,6 +33,7 @@ jobs:
         sf org login sfdx-url -f sfdx-auth-url.txt -a MyAlias -s
         echo "Authenticated with Salesforce"
 
+
     - name: Get changed and added files
       run: |
         git diff --name-only --diff-filter=ACM origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF} > changed_files.txt
@@ -41,4 +42,5 @@ jobs:
     - name: Deploy changed files to Salesforce
       run: |
         while read file; do
-          sf project deploy start -p "$file" --target-org MyAlias
+          sf project deploy start --source-dir "$file" --target-org MyAlias
+        done < changed_files.txt
